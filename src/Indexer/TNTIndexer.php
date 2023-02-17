@@ -2,15 +2,11 @@
 
 namespace TeamTNT\TNTSearch\Indexer;
 
-use Exception;
 use PDO;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use TeamTNT\TNTSearch\Connectors\FileSystemConnector;
-use TeamTNT\TNTSearch\Connectors\MySqlConnector;
-use TeamTNT\TNTSearch\Connectors\PostgresConnector;
-use TeamTNT\TNTSearch\Connectors\SQLiteConnector;
-use TeamTNT\TNTSearch\Connectors\SqlServerConnector;
+use TeamTNT\TNTSearch\Connectors\Factory\BaseConnectorFactory;
+use TeamTNT\TNTSearch\Connectors\Factory\ConnectorFactoryInterface;
 use TeamTNT\TNTSearch\FileReaders\TextFileReader;
 use TeamTNT\TNTSearch\Stemmer\CroatianStemmer;
 use TeamTNT\TNTSearch\Stemmer\NoStemmer;
@@ -38,12 +34,17 @@ class TNTIndexer
     public $steps                 = 1000;
     public $indexName             = "";
     public $statementsPrepared    = false;
+    protected $connectorFactory   = null;
 
-    public function __construct()
+    /**
+     * @param ConnectorFactoryInterface $connectorFactory
+     */
+    public function __construct($connectorFactory = new BaseConnectorFactory)
     {
         $this->stemmer    = new NoStemmer;
         $this->tokenizer  = new Tokenizer;
         $this->filereader = new TextFileReader;
+        $this->connectorFactory = $connectorFactory;
     }
 
     /**
@@ -226,8 +227,9 @@ class TNTIndexer
         }
 
         if (!$this->dbh) {
-            $connector = $this->createConnector($this->config);
-            $this->dbh = $connector->connect($this->config);
+            $this->dbh = $this->connectorFactory->connector(
+                $this->config['driver'] ?? null
+            )->connect($this->config);
         }
         return $this;
     }
@@ -240,33 +242,6 @@ class TNTIndexer
     public function indexEndTransaction()
     {
         $this->index->commit();
-    }
-
-    /**
-     * @param array $config
-     *
-     * @return FileSystemConnector|MySqlConnector|PostgresConnector|SQLiteConnector|SqlServerConnector
-     * @throws Exception
-     */
-    public function createConnector(array $config)
-    {
-        if (!isset($config['driver'])) {
-            throw new Exception('A driver must be specified.');
-        }
-
-        switch ($config['driver']) {
-            case 'mysql':
-                return new MySqlConnector;
-            case 'pgsql':
-                return new PostgresConnector;
-            case 'sqlite':
-                return new SQLiteConnector;
-            case 'sqlsrv':
-                return new SqlServerConnector;
-            case 'filesystem':
-                return new FileSystemConnector;
-        }
-        throw new Exception("Unsupported driver [{$config['driver']}]");
     }
 
     /**
