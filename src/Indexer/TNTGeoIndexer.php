@@ -31,7 +31,7 @@ class TNTGeoIndexer extends TNTIndexer
 
         $this->index->exec("CREATE TABLE IF NOT EXISTS info (key TEXT, value INTEGER)");
 
-        $connector = $this->createConnector($this->config);
+        $connector = $this->connectorFactory->connector($this->config["driver"] ?? null);
         if (!$this->dbh) {
             $this->dbh = $connector->connect($this->config);
         }

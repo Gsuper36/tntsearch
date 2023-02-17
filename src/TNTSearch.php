@@ -26,6 +26,7 @@ class TNTSearch
     public $fuzzy_distance       = 2;
     public $fuzzy_no_limit       = false;
     protected $dbh               = null;
+    protected $indexer           = null;
 
     /**
      * @param array $config
@@ -38,9 +39,13 @@ class TNTSearch
         $this->config['storage'] = rtrim($this->config['storage'], '/').'/';
     }
 
-    public function __construct()
+    /**
+     * @param TNTIndexer $indexer
+     */
+    public function __construct($indexer = new TNTIndexer)
     {
         $this->tokenizer = new Tokenizer;
+        $this->indexer = $indexer;
     }
 
     /**
@@ -57,9 +62,9 @@ class TNTSearch
      *
      * @return TNTIndexer
      */
-    public function createIndex($indexName, $disableOutput = false)
+    public function createIndex($indexName, $disableOutput = false, $indexer = null)
     {
-        $indexer = new TNTIndexer;
+        $indexer = $indexer ?: $this->indexer;
         $indexer->loadConfig($this->config);
         $indexer->disableOutput = $disableOutput;
 
@@ -451,6 +456,7 @@ class TNTSearch
 
     /**
      * @return TNTIndexer
+     * @todo WHY? Are factories for loosers?
      */
     public function getIndex()
     {
